@@ -1,7 +1,7 @@
 
   # NSTP Management System Design
 
-  This is a code bundle for NSTP Management System Design. The original project is available at https://www.figma.com/design/IKHtcYkxyuJfzIxioiytL8/NSTP-Management-System-Design.
+  This is a code bundle for NSTP Management System Design. The source design is available at https://www.figma.com/design/IKHtcYkxyuJfzIxioiytL8/NSTP-Management-System-Design.
 
   ## Running the code
 
