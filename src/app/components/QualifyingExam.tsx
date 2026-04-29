@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { FileText, Clock, AlertCircle, Award } from 'lucide-react';
+import { FileText, Clock, AlertCircle, Award, LogOut } from 'lucide-react';
+import { autoAssignQualifyingResult, loadQualifyingExamResults, saveQualifyingExamResults, syncStudentAccessFromQualifyingResult, NstpComponent, QualifyingExamResult } from '../lib/nstpData';
 
 const EXAM_QUESTIONS = [
   {
@@ -84,11 +85,11 @@ const EXAM_QUESTIONS = [
   }
 ];
 
-export default function QualifyingExam({ user, preferredComponent, onComplete }) {
-  const [answers, setAnswers] = useState({});
+export default function QualifyingExam({ user, preferredComponent, onComplete, onLogout }: { user: any; preferredComponent: NstpComponent; onComplete: (score: number | null, assignment?: QualifyingExamResult) => void; onLogout: () => void }) {
+  const [answers, setAnswers] = useState<Record<number, number>>({});
   const [timeLeft, setTimeLeft] = useState(3600); // 60 minutes
   const [submitted, setSubmitted] = useState(false);
-  const [score, setScore] = useState(null);
+  const [score, setScore] = useState<number | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -104,7 +105,7 @@ export default function QualifyingExam({ user, preferredComponent, onComplete })
     return () => clearInterval(timer);
   }, []);
 
-  const formatTime = (seconds) => {
+  const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${mins}:${secs.toString().padStart(2, '0')}`;
@@ -125,7 +126,7 @@ export default function QualifyingExam({ user, preferredComponent, onComplete })
     setSubmitted(true);
 
     // Save exam result
-    const examResult = {
+    const examResult: QualifyingExamResult = {
       userId: user.id,
       userName: user.name,
       userEmail: user.email,
@@ -134,49 +135,67 @@ export default function QualifyingExam({ user, preferredComponent, onComplete })
       timestamp: new Date().toISOString()
     };
 
-    // Add to global exam results
-    const allResults = JSON.parse(localStorage.getItem('qualifyingExamResults') || '[]');
-    allResults.push(examResult);
-    localStorage.setItem('qualifyingExamResults', JSON.stringify(allResults));
+    const allResults = loadQualifyingExamResults();
+    const assignedResult = autoAssignQualifyingResult(examResult, allResults);
+    const updatedResults = allResults.some((result) => result.userId === user.id)
+      ? allResults.map((result) => (result.userId === user.id ? assignedResult : result))
+      : [...allResults, assignedResult];
+
+    saveQualifyingExamResults(updatedResults);
+    syncStudentAccessFromQualifyingResult(assignedResult);
 
     // Save to user's record
-    localStorage.setItem(`examResult-${user.id}`, JSON.stringify(examResult));
+    localStorage.setItem(`examResult-${user.id}`, JSON.stringify(assignedResult));
   };
 
   if (submitted) {
+    const finalScore = score ?? 0;
+
     return (
-      <div className="size-full flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+      <div className="size-full flex items-center justify-center bg-[radial-gradient(circle_at_top,_#fef3c7_0%,_#fff7ed_35%,_#f8fafc_85%)] dark:bg-[radial-gradient(circle_at_top,_rgba(90,167,255,0.14)_0%,_rgba(255,210,77,0.08)_22%,_#08101f_62%)]">
         <div className="max-w-2xl w-full p-8">
-          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 text-center">
-            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
-              <Award className="w-10 h-10 text-blue-600" />
+          <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-8 text-center dark:border-slate-700 dark:bg-slate-900">
+            <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4 dark:bg-blue-500/15">
+              <Award className="w-10 h-10 text-blue-600 dark:text-blue-300" />
             </div>
-            <h2 className="text-2xl font-bold text-slate-900 mb-3">Exam Submitted Successfully</h2>
-            <div className="bg-blue-50 rounded-xl p-6 mb-6">
-              <p className="text-sm text-slate-600 mb-2">Your Score</p>
-              <p className="text-5xl font-bold text-blue-600 mb-2">{score}%</p>
-              <p className="text-sm text-slate-600">
-                {score >= 80 ? 'Excellent performance!' : score >= 70 ? 'Good job!' : 'Thank you for participating'}
+            <h2 className="text-2xl font-bold text-slate-900 mb-3 dark:text-slate-100">Exam Submitted Successfully</h2>
+            <div className="bg-blue-50 rounded-xl p-6 mb-6 dark:bg-blue-500/10">
+              <p className="text-sm text-slate-600 mb-2 dark:text-slate-300">Your Score</p>
+              <p className="text-5xl font-bold text-blue-600 mb-2">{finalScore}%</p>
+              <p className="text-sm text-slate-600 dark:text-slate-300">
+                {finalScore >= 80 ? 'Excellent performance!' : finalScore >= 70 ? 'Good job!' : 'Thank you for participating'}
               </p>
             </div>
 
-            <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-6 mb-6">
+            <div className={`${score !== null && score >= 0 ? 'bg-yellow-50 border-yellow-200 dark:border-yellow-500/20 dark:bg-yellow-500/10' : 'bg-slate-50 border-slate-200 dark:border-slate-700 dark:bg-slate-800'} border rounded-xl p-6 mb-6`}>
               <div className="flex items-start gap-3">
-                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                <AlertCircle className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5 dark:text-yellow-300" />
                 <div className="text-left">
-                  <p className="font-semibold text-yellow-900 mb-1">Awaiting Component Assignment</p>
-                  <p className="text-sm text-yellow-800">
-                    Your preferred component is <strong>{preferredComponent}</strong>. The NSTP Coordinator will review
-                    all qualifying exam scores and assign students to components based on rankings and available slots.
-                    You will be notified of your final component assignment.
+                  <p className="font-semibold text-yellow-900 mb-1 dark:text-yellow-100">
+                    {(() => {
+                      const saved = loadQualifyingExamResults().find((result) => result.userId === user.id);
+                      return saved?.assignedComponent ? 'Component Access Granted' : saved?.status === 'not-qualified' ? 'Qualifying Score Not Reached' : 'Awaiting Available Slot';
+                    })()}
+                  </p>
+                  <p className="text-sm text-yellow-800 dark:text-yellow-100">
+                    {(() => {
+                      const saved = loadQualifyingExamResults().find((result) => result.userId === user.id);
+                      if (saved?.assignedComponent) {
+                        return <>You qualified for <strong>{saved.assignedComponent}</strong>. Continue to enter the student LMS for your assigned component.</>;
+                      }
+                      if (saved?.status === 'not-qualified') {
+                        return <>Your preferred component is <strong>{preferredComponent}</strong>. The NSTP Coordinator may still review or manually approve your application.</>;
+                      }
+                      return <>Your preferred component is <strong>{preferredComponent}</strong>, but the slot queue is currently full. The NSTP Coordinator can manually approve or reassign your application.</>;
+                    })()}
                   </p>
                 </div>
               </div>
             </div>
 
             <button
-              onClick={() => onComplete(score)}
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+              onClick={() => onComplete(finalScore, loadQualifyingExamResults().find((result) => result.userId === user.id))}
+              className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-3 rounded-xl hover:opacity-95 transition-opacity font-medium"
             >
               Continue
             </button>
@@ -187,24 +206,34 @@ export default function QualifyingExam({ user, preferredComponent, onComplete })
   }
 
   return (
-    <div className="size-full overflow-auto bg-slate-50">
-      <div className="max-w-4xl mx-auto p-8">
+    <div className="size-full overflow-auto bg-[#fcfaf6] dark:bg-slate-950">
+      <div className="max-w-4xl mx-auto p-4 md:p-8">
+        <div className="flex justify-end mb-4">
+          <button
+            onClick={onLogout}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-slate-300 bg-white text-sm font-medium text-slate-700 hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-200 dark:hover:bg-slate-800"
+          >
+            <LogOut className="w-4 h-4" />
+            Logout
+          </button>
+        </div>
+
         {/* Header */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 mb-6">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 mb-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h1 className="text-2xl font-bold text-slate-900 mb-2">NSTP Qualifying Examination</h1>
-              <p className="text-slate-600">Preferred Component: <strong>{preferredComponent}</strong></p>
+              <h1 className="text-2xl font-bold text-slate-900 mb-2 dark:text-slate-100">NSTP Qualifying Examination</h1>
+              <p className="text-slate-600 dark:text-slate-300">Preferred Component: <strong>{preferredComponent}</strong></p>
             </div>
-            <div className="flex items-center gap-2 text-orange-600 bg-orange-50 px-4 py-2 rounded-lg">
+            <div className="flex items-center gap-2 text-orange-700 bg-orange-100 px-4 py-2 rounded-xl dark:bg-orange-500/15 dark:text-orange-200">
               <Clock className="w-5 h-5" />
               <span className="font-mono font-semibold text-lg">{formatTime(timeLeft)}</span>
             </div>
           </div>
-          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 dark:border-blue-500/20 dark:bg-blue-500/10">
             <div className="flex items-start gap-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <div className="text-sm text-blue-900">
+              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5 dark:text-blue-300" />
+              <div className="text-sm text-blue-900 dark:text-blue-100">
                 <p className="font-semibold mb-1">Important Notice</p>
                 <p>
                   Your exam score will determine your component placement. Students are ranked by score, and
@@ -219,8 +248,8 @@ export default function QualifyingExam({ user, preferredComponent, onComplete })
         {/* Questions */}
         <div className="space-y-6 mb-6">
           {EXAM_QUESTIONS.map((q, idx) => (
-            <div key={idx} className="bg-white rounded-xl border border-slate-200 p-6">
-              <h3 className="font-semibold text-slate-900 mb-4">
+            <div key={idx} className="bg-white rounded-2xl border border-slate-200 p-6 shadow-sm dark:border-slate-700 dark:bg-slate-900">
+              <h3 className="font-semibold text-slate-900 mb-4 dark:text-slate-100">
                 {idx + 1}. {q.question}
               </h3>
               <div className="space-y-3">
@@ -229,8 +258,8 @@ export default function QualifyingExam({ user, preferredComponent, onComplete })
                     key={optIdx}
                     className={`flex items-center gap-3 p-4 rounded-lg border-2 cursor-pointer transition-colors ${
                       answers[idx] === optIdx
-                        ? 'border-blue-600 bg-blue-50'
-                        : 'border-slate-200 hover:border-slate-300'
+                        ? 'border-amber-500 bg-amber-50 dark:bg-amber-500/10'
+                        : 'border-slate-200 hover:border-amber-300 dark:border-slate-700 dark:hover:border-amber-400'
                     }`}
                   >
                     <input
@@ -238,9 +267,9 @@ export default function QualifyingExam({ user, preferredComponent, onComplete })
                       name={`question-${idx}`}
                       checked={answers[idx] === optIdx}
                       onChange={() => setAnswers({ ...answers, [idx]: optIdx })}
-                      className="w-4 h-4 text-blue-600"
+                      className="w-4 h-4 text-amber-600"
                     />
-                    <span className="text-slate-700">{option}</span>
+                    <span className="text-slate-700 dark:text-slate-200">{option}</span>
                   </label>
                 ))}
               </div>
@@ -249,20 +278,20 @@ export default function QualifyingExam({ user, preferredComponent, onComplete })
         </div>
 
         {/* Submit */}
-        <div className="bg-white rounded-xl border border-slate-200 p-6 sticky bottom-0">
+        <div className="bg-white rounded-2xl border border-slate-200 p-6 sticky bottom-0 shadow-sm dark:border-slate-700 dark:bg-slate-900">
           <div className="flex items-center justify-between">
             <div>
-              <p className="font-medium text-slate-900">
+              <p className="font-medium text-slate-900 dark:text-slate-100">
                 Questions answered: {Object.keys(answers).length} / {EXAM_QUESTIONS.length}
               </p>
-              <p className="text-sm text-slate-600">
+              <p className="text-sm text-slate-600 dark:text-slate-300">
                 Make sure to review all answers before submitting
               </p>
             </div>
             <button
               onClick={handleSubmit}
               disabled={Object.keys(answers).length < EXAM_QUESTIONS.length}
-              className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium disabled:bg-slate-300 disabled:cursor-not-allowed"
+              className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-3 rounded-xl hover:opacity-95 transition-opacity font-medium disabled:bg-slate-300 disabled:cursor-not-allowed"
             >
               Submit Examination
             </button>

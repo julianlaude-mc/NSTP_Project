@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Shield, Heart, Anchor, CheckCircle } from 'lucide-react';
+import { Shield, Heart, Anchor, CheckCircle, LogOut, Sparkles } from 'lucide-react';
+import RoleShell from './RoleShell';
 
 const NSTP_COMPONENTS = [
   {
@@ -60,10 +61,10 @@ const NSTP_COMPONENTS = [
   }
 ];
 
-export default function EnrollmentPage({ user, onEnroll }) {
+export default function EnrollmentPage({ user, onEnroll, onLogout }: { user: any; onEnroll: (component: string) => void; onLogout: () => void }) {
   // Show completion message
   const hasCompletedGeneralEd = user.generalEducationComplete;
-  const [selectedComponent, setSelectedComponent] = useState(null);
+  const [selectedComponent, setSelectedComponent] = useState<any>(null);
 
   const handleEnroll = () => {
     if (selectedComponent) {
@@ -72,18 +73,43 @@ export default function EnrollmentPage({ user, onEnroll }) {
   };
 
   return (
-    <div className="size-full overflow-auto bg-gradient-to-br from-blue-50 via-white to-indigo-50">
-      <div className="max-w-6xl mx-auto p-8">
+    <RoleShell
+      user={user}
+      onLogout={onLogout}
+      eyebrow="Student Workspace"
+      title="Select Your NSTP Component"
+      description="Choose the National Service Training Program component that aligns with your interests and career goals."
+      sidebarTitle="Enrollment Status"
+      sidebarItems={[
+        { label: 'General Education', value: hasCompletedGeneralEd ? 'Completed' : 'In progress', tone: 'success' },
+        { label: 'Selected Component', value: selectedComponent ? selectedComponent.name : 'Not selected yet', tone: 'warning' },
+        { label: 'Next Step', value: 'Complete component enrollment', tone: 'info' },
+      ]}
+    >
+      <div className="max-w-6xl mx-auto p-4 md:p-8">
+        <div className="grid md:grid-cols-2 gap-4 mb-6">
+          <div className="rounded-2xl border border-amber-200 bg-gradient-to-r from-amber-50 to-orange-50 p-5 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
+            <p className="text-xs uppercase tracking-[0.16em] font-semibold text-amber-700 mb-2">Enrollment Stage</p>
+            <h3 className="text-lg font-bold text-slate-900 mb-1 dark:text-slate-100">Choose your NSTP component</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300">Your selected component determines your specialized modules, activities, and deployment context.</p>
+          </div>
+          <div className="rounded-2xl border border-emerald-200 bg-gradient-to-r from-emerald-50 to-teal-50 p-5 shadow-sm dark:border-slate-700 dark:from-slate-900 dark:to-slate-800">
+            <p className="text-xs uppercase tracking-[0.16em] font-semibold text-emerald-700 mb-2">Readiness</p>
+            <h3 className="text-lg font-bold text-slate-900 mb-1 dark:text-slate-100">General Education completed</h3>
+            <p className="text-sm text-slate-600 dark:text-slate-300">You can now officially enroll in CWTS, LTS, or MTS tracks.</p>
+          </div>
+        </div>
+
         {/* Header */}
         <div className="text-center mb-8">
           {hasCompletedGeneralEd && (
-            <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-lg mb-4">
+            <div className="inline-flex items-center gap-2 bg-green-100 text-green-700 px-4 py-2 rounded-xl mb-4 dark:bg-green-500/15 dark:text-green-100">
               <CheckCircle className="w-5 h-5" />
               <span className="font-medium">General Education Complete - 25 Hours</span>
             </div>
           )}
-          <h1 className="text-3xl font-bold text-slate-900 mb-3">Select Your NSTP Component</h1>
-          <p className="text-slate-600 max-w-2xl mx-auto">
+          <h1 className="text-3xl font-bold text-slate-900 mb-3 dark:text-slate-100">Select Your NSTP Component</h1>
+          <p className="text-slate-600 max-w-2xl mx-auto dark:text-slate-300">
             Choose the National Service Training Program component that aligns with your interests and career goals.
             Each component includes specialized training and community service.
           </p>
@@ -99,10 +125,10 @@ export default function EnrollmentPage({ user, onEnroll }) {
               <button
                 key={component.id}
                 onClick={() => setSelectedComponent(component)}
-                className={`text-left p-6 rounded-xl border-2 transition-all ${
+                className={`text-left p-6 rounded-2xl border-2 transition-all ${
                   isSelected
-                    ? 'border-blue-600 bg-blue-50 shadow-lg'
-                    : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-md'
+                    ? 'border-amber-500 bg-amber-50 shadow-lg dark:border-amber-400 dark:bg-amber-500/10'
+                    : 'border-slate-200 bg-white hover:border-amber-300 hover:shadow-md dark:border-slate-700 dark:bg-slate-900 dark:hover:border-amber-400'
                 }`}
               >
                 <div className="flex items-start gap-4 mb-4">
@@ -111,19 +137,19 @@ export default function EnrollmentPage({ user, onEnroll }) {
                   </div>
                   <div className="flex-1">
                     <div className="flex items-center justify-between mb-1">
-                      <h3 className="font-bold text-slate-900">{component.name}</h3>
-                      {isSelected && <CheckCircle className="w-5 h-5 text-blue-600" />}
+                      <h3 className="font-bold text-slate-900 dark:text-slate-100">{component.name}</h3>
+                      {isSelected && <CheckCircle className="w-5 h-5 text-amber-600" />}
                     </div>
-                    <p className="text-sm text-slate-600">{component.fullName}</p>
+                    <p className="text-sm text-slate-600 dark:text-slate-300">{component.fullName}</p>
                   </div>
                 </div>
 
-                <p className="text-sm text-slate-700 mb-4">{component.description}</p>
+                <p className="text-sm text-slate-700 mb-4 dark:text-slate-300">{component.description}</p>
 
                 <div className="space-y-2">
                   {component.benefits.map((benefit, idx) => (
-                    <div key={idx} className="flex items-center gap-2 text-sm text-slate-600">
-                      <div className="w-1.5 h-1.5 rounded-full bg-slate-400" />
+                    <div key={idx} className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                      <div className="w-1.5 h-1.5 rounded-full bg-slate-400 dark:bg-slate-500" />
                       {benefit}
                     </div>
                   ))}
@@ -135,26 +161,27 @@ export default function EnrollmentPage({ user, onEnroll }) {
 
         {/* Enroll Button */}
         {selectedComponent && (
-          <div className="bg-white rounded-xl border border-slate-200 p-6 shadow-lg">
+          <div className="bg-white rounded-2xl border border-slate-200 p-6 shadow-lg dark:border-slate-700 dark:bg-slate-900 dark:text-slate-100">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="font-semibold text-slate-900 mb-1">
+                <h3 className="font-semibold text-slate-900 mb-1 dark:text-slate-100">
                   Ready to enroll in {selectedComponent.name}?
                 </h3>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-slate-600 dark:text-slate-300">
                   You'll get access to all modules, assessments, and learning materials.
                 </p>
               </div>
               <button
                 onClick={handleEnroll}
-                className="bg-blue-600 text-white px-8 py-3 rounded-lg hover:bg-blue-700 transition-colors font-medium"
+                className="bg-gradient-to-r from-amber-500 to-orange-600 text-white px-8 py-3 rounded-xl hover:opacity-95 transition-opacity font-medium inline-flex items-center gap-2 cursor-pointer"
               >
+                <Sparkles className="w-4 h-4" />
                 Complete Enrollment
               </button>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </RoleShell>
   );
 }
