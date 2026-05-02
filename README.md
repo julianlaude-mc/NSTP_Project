@@ -1,6 +1,6 @@
-# Personal Portfolio
+# Julian Mari Geronimo Laude Portfolio
 
-Responsive React and TypeScript portfolio for an aspiring data scientist and analyst.
+Responsive React and TypeScript portfolio for technology, data, research support, and software project work.
 
 ## Run Locally
 
