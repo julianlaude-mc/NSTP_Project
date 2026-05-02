@@ -1,11 +1,12 @@
+# Personal Portfolio
 
-  # NSTP Management System Design
+Responsive React and TypeScript portfolio for an aspiring data scientist and analyst.
 
-  This is a code bundle for NSTP Management System Design. The source design is available at https://www.figma.com/design/IKHtcYkxyuJfzIxioiytL8/NSTP-Management-System-Design.
+## Run Locally
 
-  ## Running the code
+```bash
+npm install
+npm run dev
+```
 
-  Run `npm i` to install the dependencies.
-
-  Run `npm run dev` to start the development server.
-  
+Open the local Vite URL shown in the terminal.
